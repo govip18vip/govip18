@@ -1,0 +1,9 @@
+{
+  "name": "geek-chat",
+  "version": "8.0.0",
+  "description": "极客加密聊天 AES-256 WebRTC E2E",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "ws": "^8.16.0" },
+  "engines": { "node": ">=18.0.0" }
+}
