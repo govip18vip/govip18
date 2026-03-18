@@ -15,7 +15,7 @@ const RTC_CFG = {
 const MAX_FILE = 15*1024*1024;
 const ICE_TO   = 15000;
 const ICE_MAX  = 3;
-const AI_API   = 'https://backendai.internxt.com/';
+const AI_API   = 'https://text.pollinations.ai/openai';
 
 /* ─── State ─── */
 let ws=null, roomKey='', derivedKey='', myNick='', myId='', roomHash='';
@@ -192,30 +192,48 @@ const AI_ACTIONS = {
   code:         { label:'解释代码', prompt:'请解释以下代码的功能和逻辑，使用简洁清晰的语言：' },
 };
 
+// ★ 双引擎AI：Puter.js（免费无限，首选）→ Pollinations（备用）
 async function callAI(userPrompt) {
+  const SYS = '你是一个高效的AI助手，集成在加密聊天软件GeekChat中。请简洁、准确地回答用户的问题。用户发的消息可能是多种语言，请根据上下文用合适语言回复，通常优先中文。';
+
+  // ── 方案1：Puter.js（免费，无需Key，GPT-4o-mini级别）──
+  if (typeof puter !== 'undefined' && puter?.ai?.chat) {
+    try {
+      const msgs = [
+        { role: 'system', content: SYS },
+        { role: 'user', content: userPrompt }
+      ];
+      const resp = await puter.ai.chat(msgs, { model: 'gpt-4o-mini' });
+      if (typeof resp === 'string' && resp) return resp;
+      const c = resp?.message?.content ?? resp?.content ?? '';
+      if (c) return c;
+    } catch(e) {
+      console.warn('[AI] Puter failed:', e.message);
+    }
+  }
+
+  // ── 方案2：Pollinations.AI（免费，无需Key，OpenAI兼容）──
   const resp = await fetch(AI_API, {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'accept': '*/*',
-      'origin': 'https://7e6a3fe3.pinit.eth.limo',
-      'referer': 'https://7e6a3fe3.pinit.eth.limo/',
-    },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       messages: [
-        { role: 'system', content: '你是一个高效的AI助手，集成在加密聊天软件中。请简洁、准确地回答用户的问题。用户发的消息可能是多种语言，请根据上下文用合适语言回复，通常优先中文。' },
+        { role: 'system', content: SYS },
         { role: 'user', content: userPrompt }
       ],
-      model: 'gpt-4o',
-      temperature: 0.7,
-      max_tokens: 2048
+      model: 'openai',
+      private: true,
+      seed: Math.floor(Math.random() * 9999)
     })
   });
   if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Empty response');
-  return content;
+  // Pollinations 返回 JSON 或纯文本，兼容两种
+  const raw = await resp.text();
+  if (!raw) throw new Error('Empty response');
+  try {
+    const j = JSON.parse(raw);
+    return j.choices?.[0]?.message?.content || j.text || raw;
+  } catch { return raw; }
 }
 
 // 渲染AI消息（含loading态）
