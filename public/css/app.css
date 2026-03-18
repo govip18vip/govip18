@@ -88,8 +88,8 @@ input,button,textarea{font-family:var(--fb);outline:none;border:none}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .msg-row.me{align-self:flex-end;align-items:flex-end}
 .msg-row.other{align-self:flex-start;align-items:flex-start}
-.msg-name{font-size:11px;color:var(--muted);margin-bottom:3px;padding:0 4px;font-family:var(--fm);cursor:pointer;transition:.15s}
-.msg-name:hover{color:var(--g)}
+.msg-name{font-size:11px;color:var(--muted);margin-bottom:3px;padding:0 2px;font-family:var(--fm);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:5px}
+.msg-name:hover{filter:brightness(1.25)}
 .msg-bubble{position:relative;padding:10px 13px;border-radius:14px;font-size:14.5px;line-height:1.55;word-break:break-word;max-width:100%}
 .msg-row.me .msg-bubble{background:var(--g);color:#000;border-bottom-right-radius:4px}
 .msg-row.other .msg-bubble{background:var(--bgm);color:var(--text);border-bottom-left-radius:4px;border:1px solid var(--border)}
@@ -280,7 +280,7 @@ input,button,textarea{font-family:var(--fb);outline:none;border:none}
 /* MEMBER LIST */
 .member-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:12px;cursor:pointer;transition:.15s;border:1px solid transparent}
 .member-item:hover{background:var(--bgm);border-color:var(--border)}
-.m-av{width:40px;height:40px;border-radius:50%;background:var(--bgm);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.m-av{width:40px;height:40px;border-radius:50%;background:var(--bgm);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;overflow:hidden}
 .m-av.online{border-color:var(--g)}
 .m-info{flex:1}
 .m-name{font-size:14px;font-weight:600;font-family:var(--fm)}
