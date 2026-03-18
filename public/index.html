@@ -119,6 +119,40 @@
     <div class="lb-dl" onclick="downloadLB()">💾 保存</div>
   </div>
 
+  <!-- ★ AI 助手面板 -->
+  <div class="ai-overlay" id="aiOverlay" onclick="if(event.target===this)closeAIPanel()">
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-icon">🤖</div>
+        <div>
+          <div class="ai-panel-title">AI 助手</div>
+          <div class="ai-panel-sub">GPT-4o · 本地处理，不存储对话</div>
+        </div>
+      </div>
+      <div class="ai-ctx-box" id="aiCtxBox">
+        <div class="ai-ctx-label">📌 引用消息</div>
+        <div class="ai-ctx-text" id="aiCtxText"></div>
+        <div class="ai-ctx-clear" onclick="clearAICtx()">✕</div>
+      </div>
+      <div class="ai-actions-grid">
+        <div class="ai-act" onclick="doAIAction('translate_zh')"><span>🇨🇳</span><small>译为中文</small></div>
+        <div class="ai-act" onclick="doAIAction('translate_en')"><span>🇺🇸</span><small>译为英文</small></div>
+        <div class="ai-act" onclick="doAIAction('summarize')"><span>📝</span><small>总结内容</small></div>
+        <div class="ai-act" onclick="doAIAction('explain')"><span>💡</span><small>详细解释</small></div>
+        <div class="ai-act" onclick="doAIAction('reply')"><span>✍️</span><small>建议回复</small></div>
+        <div class="ai-act" onclick="doAIAction('polish')"><span>✨</span><small>润色文字</small></div>
+        <div class="ai-act" onclick="doAIAction('sentiment')"><span>❤️</span><small>情感分析</small></div>
+        <div class="ai-act" onclick="doAIAction('code')"><span>💻</span><small>解释代码</small></div>
+      </div>
+      <div class="ai-divider"><span>或输入自定义问题</span></div>
+      <div class="ai-custom-bar">
+        <input id="aiCustomInput" placeholder="问任何问题…" autocomplete="off">
+        <div class="ai-custom-send" onclick="doAICustom()">➤</div>
+      </div>
+      <div class="ai-panel-close" onclick="closeAIPanel()">关闭</div>
+    </div>
+  </div>
+
   <!-- ═══ 登录页 ═══ -->
   <div id="sLogin" class="screen active">
     <div class="login-wrap">
@@ -126,7 +160,7 @@
         <div class="login-logo">
           <div class="logo-icon">🔐</div>
           <h1>GEEK · CHAT</h1>
-          <p>AES-256 · PBKDF2 · WebRTC · E2E</p>
+          <p>AES-256 · PBKDF2 · WebRTC · E2E · AI</p>
         </div>
         <div class="input-group">
           <label>昵称</label>
@@ -162,6 +196,7 @@
           <span class="badge">🎭 变声</span>
           <span class="badge">📲 二维码</span>
           <span class="badge">💬 私聊</span>
+          <span class="badge" style="color:var(--blue);border-color:rgba(79,195,247,.3)">🤖 AI</span>
         </div>
       </div>
     </div>
@@ -195,7 +230,7 @@
     </div>
 
     <div class="ad-bar" id="adBar">🔥 阅后即焚：<span id="adBarText"></span></div>
-    <div class="msgs" id="msgBox"><div class="sys-msg">🔒 AES-256 端对端加密已启用</div></div>
+    <div class="msgs" id="msgBox"><div class="sys-msg">🔒 AES-256 端对端加密 · 输入 <strong>@ai</strong> 使用AI助手</div></div>
 
     <div class="reply-bar" id="replyBar">
       <div class="rb-content"><div class="rb-name" id="rbName">回复</div><div class="rb-text" id="rbText"></div></div>
@@ -210,7 +245,7 @@
     <div class="input-area">
       <div class="cbtn" id="voiceToggle" onclick="toggleVoiceMode()">🎤</div>
       <div class="inp-wrap">
-        <input id="iMsg" placeholder="加密消息…" autocomplete="off">
+        <input id="iMsg" placeholder="加密消息… (@ai 问AI)" autocomplete="off">
         <button id="holdBtn" class="hold-btn">按住 说话</button>
       </div>
       <div class="cbtn" onclick="toggleEmoji()">😊</div>
@@ -227,6 +262,7 @@
       <div class="att" onclick="openSchedPicker()"><div class="att-ic" style="background:rgba(79,195,247,.12)">⏱</div><span>定时</span></div>
       <div class="att" onclick="openSheet('settings')"><div class="att-ic" style="background:rgba(255,68,68,.12)">🔥</div><span>阅后即焚</span></div>
       <div class="att" onclick="openEffectPicker()"><div class="att-ic" id="efIc" style="background:rgba(187,134,252,.12)">🎭</div><span id="efTxt">变声</span></div>
+      <div class="att" onclick="openAIPanel(null)"><div class="att-ic" style="background:rgba(79,195,247,.08);border:1px solid rgba(79,195,247,.25)">🤖</div><span style="color:var(--blue)">AI助手</span></div>
     </div>
     <input type="file" id="fileIn" style="display:none">
   </div>

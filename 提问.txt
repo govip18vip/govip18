@@ -1,0 +1,75 @@
+render.com上面代码。我是在这个平台的免费版本搭建的。我是在能用的情况。增加ui体验。和安全。且在聊天工具里面增加ai功能。ai实现对聊天内容。提问。翻译。等。然后用户单独可以和ai聊天。也可以在房间里面。@ai。ai代码用。curl ^"https://backendai.internxt.com/^" ^
+
+  -H ^"accept: */*^" ^
+
+  -H ^"accept-language: en,zh-CN;q=0.9,zh;q=0.8,zh-TW;q=0.7^" ^
+
+  -H ^"content-type: application/json^" ^
+
+  -H ^"dnt: 1^" ^
+
+  -H ^"origin: https://7e6a3fe3.pinit.eth.limo^" ^
+
+  -H ^"priority: u=1, i^" ^
+
+  -H ^"referer: https://7e6a3fe3.pinit.eth.limo/^" ^
+
+  -H ^"sec-ch-ua: ^\^"Chromium^\^";v=^\^"146^\^", ^\^"Not-A.Brand^\^";v=^\^"24^\^", ^\^"Google Chrome^\^";v=^\^"146^\^"^" ^
+
+  -H ^"sec-ch-ua-mobile: ?0^" ^
+
+  -H ^"sec-ch-ua-platform: ^\^"Windows^\^"^" ^
+
+  -H ^"sec-fetch-dest: empty^" ^
+
+  -H ^"sec-fetch-mode: cors^" ^
+
+  -H ^"sec-fetch-site: cross-site^" ^
+
+  -H ^"user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36^" ^
+
+  --data-raw ^"^{^\^"messages^\^":^[^{^\^"role^\^":^\^"system^\^",^\^"content^\^":^\^"^ ^ ^ ^ ^ ^ ^ ^ ^ ^ AI^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^\^"^},^{^\^"role^\^":^\^"user^\^",^\^"content^\^":^\^"10+10^\^"^},^{^\^"role^\^":^\^"assistant^\^",^\^"content^\^":^\^"**^ ^ ^ ** 10 + 10 = 20  ^\^\n^\^\n^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^  Python ^ ^ ^ ^ ^\^\n^\^\n```python^\^\n^# ^ ^  10 + 10 ^ ^ ^ ^\^\na = 10^\^\nb = 10^\^\nresult = a + b^\^\n^\^\nprint(^\^\^\^"10 + 10 =^\^\^\^", result)   ^# ^ ^ ^ 10 + 10 = 20^\^\n```^\^\n^\^\n^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^  `a` ^  `b`^ ^ ^ ^ ^  `+` ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^\^"^},^{^\^"role^\^":^\^"user^\^",^\^"content^\^":^\^"1+1^\^"^}^],^\^"model^\^":^\^"gpt-4o^\^",^\^"temperature^\^":0.7,^\^"max_tokens^\^":4096^}^"响应为{
+
+    "id": "chatcmpl-78f7c5363db645ac8acdf57d65fed2a1",
+
+    "choices": [
+
+        {
+
+            "index": 0,
+
+            "message": {
+
+                "role": "assistant",
+
+                "content": "**答案:** 1 + 1 = 2  \n\n下面给出一个简洁的 Python 示例,演示如何在代码中完成这一步运算,并输出结果:\n\n```python\n# 示例:计算 1 + 1\na = 1          # 第一个加数\nb = 1          # 第二个加数\n\nresult = a + b # 使用加法运算符 + 将两数相加\n\nprint(\"1 + 1 =\", result)  # 输出结果:1 + 1 = 2\n```\n\n**代码说明**  \n- 第 2、3 行分别给变量 `a`、`b` 赋值为 1。  \n- 第 5 行使用 `+` 运算符完成加法运算,得到 `result`。  \n- 第 7 行通过 `print` 将计算过程和结果打印到控制台。\n\n如果你使用其他编程语言(如 Java、C、JavaScript 等),只需将相应的语法替换为对应语言的变量声明与输出语句,思路保持不变。祝学习顺利!",
+
+                "reasoning_content": "The user just asks \"1+1\". We should answer in Chinese, professional, friendly, with code example and comments. Provide answer 2. Provide maybe Python snippet.",
+
+                "tool_calls": []
+
+            },
+
+            "finish_reason": "stop"
+
+        }
+
+    ],
+
+    "created": 1773761924,
+
+    "model": "gpt-oss-120b",
+
+    "object": "chat.completion",
+
+    "usage": {
+
+        "prompt_tokens": 278,
+
+        "completion_tokens": 285,
+
+        "total_tokens": 563
+
+    }
+
+}
