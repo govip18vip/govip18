@@ -314,6 +314,8 @@ export function useChatContext() {
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const wsRef = useRef<WebSocket | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const clientIdRef = useRef<string>("");
   const seenNonces = useRef(new Set<string>());
   const reconTimer = useRef<ReturnType<typeof setTimeout>>();
   const reconCount = useRef(0);
@@ -330,17 +332,32 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // Send encrypted message via POST API
   const sendEncrypted = useCallback(
-    (obj: Record<string, unknown>) => {
-      const ws = wsRef.current;
-      const dk = stateRef.current.derivedKey;
-      if (!ws || ws.readyState !== WebSocket.OPEN || !dk) return;
-      ws.send(encrypt(obj, dk));
+    async (obj: Record<string, unknown>) => {
+      const s = stateRef.current;
+      if (!s.connected || !s.derivedKey || !clientIdRef.current) return;
+      
+      const encrypted = encrypt(obj, s.derivedKey);
+      
+      try {
+        await fetch("/api/room", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomId: s.roomHash,
+            clientId: clientIdRef.current,
+            data: encrypted,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to send message:", err);
+      }
     },
     []
   );
 
-  const handleWSMessage = useCallback(
+  const handleSSEMessage = useCallback(
     (data: string) => {
       const s = stateRef.current;
       let env: Record<string, unknown>;
@@ -353,7 +370,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       if (env._sys) {
         const sys = env._sys as string;
         if (sys === "welcome") {
+          clientIdRef.current = env._id as string;
           dispatch({ type: "SET_CONNECTED", myId: env._id as string });
+          // Send presence after connected
+          const presenceMsg = encrypt(
+            { type: "presence", action: "join", nick: s.myNick },
+            s.derivedKey
+          );
+          fetch("/api/room", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              roomId: s.roomHash,
+              clientId: env._id,
+              data: presenceMsg,
+            }),
+          }).catch(() => {});
         }
         if (sys === "left") {
           const leftId = env._id as string;
@@ -370,7 +402,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
-      if (env._data && env._from !== s.myId) {
+      if (env._data && env._from !== clientIdRef.current) {
         const p = decrypt(env._data as string, s.derivedKey, seenNonces.current);
         if (!p) return;
         const sid = env._from as string;
@@ -382,14 +414,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               dispatch({ type: "ADD_MEMBER", id: sid, nick: p.nick as string });
               if (action === "join") {
                 sysMsg(`${p.nick} 加入了房间`);
-                sendEncrypted({ type: "presence", action: "sync", nick: s.myNick });
+                // Send sync back
+                const syncMsg = encrypt(
+                  { type: "presence", action: "sync", nick: s.myNick },
+                  s.derivedKey
+                );
+                fetch("/api/room", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    roomId: s.roomHash,
+                    clientId: clientIdRef.current,
+                    data: syncMsg,
+                  }),
+                }).catch(() => {});
               }
             }
             break;
           }
           case "chat": {
             if (p.privateTo) {
-              if (p.privateTo === s.myId) {
+              if (p.privateTo === clientIdRef.current) {
                 const nick = s.members[sid] || "对方";
                 const pm: PMMessage = { me: false, nick, text: p.text as string, ts: (p.ts as number) || Date.now() };
                 dispatch({ type: "ADD_PM", target: sid, message: pm });
@@ -413,7 +458,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               };
               dispatch({ type: "ADD_MESSAGE", message: msg });
               dbSave({ ...p, _isMe: false }, s.derivedKey);
-              sendEncrypted({ type: "receipt", msgId: p.id, status: "read" });
+              // Send read receipt
+              const receiptMsg = encrypt(
+                { type: "receipt", msgId: p.id, status: "read" },
+                s.derivedKey
+              );
+              fetch("/api/room", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  roomId: s.roomHash,
+                  clientId: clientIdRef.current,
+                  data: receiptMsg,
+                }),
+              }).catch(() => {});
             }
             break;
           }
@@ -457,46 +515,48 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [sendEncrypted, sysMsg]
+    [sysMsg]
   );
 
-  const connectWS = useCallback(
-    (derivedKeyVal: string, myNickVal: string) => {
-      const roomHash = getRoomHash(derivedKeyVal);
-      const wsUrl =
-        typeof window !== "undefined"
-          ? `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}?r=${roomHash}`
-          : "";
-
-      let ws: WebSocket;
-      try {
-        ws = new WebSocket(wsUrl);
-      } catch {
-        dispatch({ type: "SET_DISCONNECTED", error: "网络异常" });
-        return;
+  const connectSSE = useCallback(
+    async (derivedKeyVal: string, myNickVal: string, roomHashVal: string) => {
+      // Close existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
       }
 
-      wsRef.current = ws;
+      const sseUrl = `/api/room?r=${roomHashVal}`;
+      const es = new EventSource(sseUrl);
+      eventSourceRef.current = es;
 
-      ws.onopen = async () => {
+      es.onmessage = (e) => {
+        handleSSEMessage(e.data);
+      };
+
+      es.onopen = async () => {
         reconCount.current = 0;
         clearTimeout(reconTimer.current);
-        ws.send(
-          encrypt(
-            { type: "presence", action: "join", nick: myNickVal },
-            derivedKeyVal
-          )
-        );
         dispatch({ type: "SET_SCREEN", screen: "chat" });
+        
+        // Setup ping interval
         clearInterval(pingInterval.current);
         pingInterval.current = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            try {
-              ws.send(JSON.stringify({ _ping: Date.now() }));
-            } catch {}
+          if (stateRef.current.connected && clientIdRef.current) {
+            fetch("/api/room", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                roomId: roomHashVal,
+                clientId: clientIdRef.current,
+                data: { _ping: Date.now() },
+              }),
+            }).catch(() => {});
           }
         }, 20000);
-        await initDB(roomHash);
+
+        // Init DB and load history
+        await initDB(roomHashVal);
         const history = await loadHistory(derivedKeyVal);
         if (history.length > 0) {
           const histMsgs: ChatMessage[] = history.map((m) => ({
@@ -518,9 +578,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         sysMsg("已加入加密聊天室 -- 输入 @ai 使用AI助手");
       };
 
-      ws.onmessage = (e) => handleWSMessage(e.data);
-
-      ws.onclose = () => {
+      es.onerror = () => {
         clearInterval(pingInterval.current);
         dispatch({ type: "SET_DISCONNECTED" });
         if (stateRef.current.screen === "chat") {
@@ -529,14 +587,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           const delay = Math.min(1000 * Math.pow(1.5, n), 30000);
           reconCount.current = n + 1;
           reconTimer.current = setTimeout(() => {
-            if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-              connectWS(derivedKeyVal, myNickVal);
+            if (!eventSourceRef.current || eventSourceRef.current.readyState !== EventSource.OPEN) {
+              connectSSE(derivedKeyVal, myNickVal, roomHashVal);
             }
           }, delay);
         }
       };
     },
-    [handleWSMessage, sysMsg]
+    [handleSSEMessage, sysMsg]
   );
 
   const joinRoom = useCallback(
@@ -556,9 +614,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
       dispatch({ type: "SET_CONNECTING", connecting: true });
       // Use setTimeout to ensure state is updated before connecting
-      setTimeout(() => connectWS(dk, cleanNick), 0);
+      setTimeout(() => connectSSE(dk, cleanNick, rh), 0);
     },
-    [connectWS]
+    [connectSSE]
   );
 
   const exitRoom = useCallback(() => {
@@ -568,11 +626,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (stateRef.current.autoClearOnExit) {
       clearAllMsgs();
     }
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
     if (wsRef.current) {
       wsRef.current.onclose = null;
       wsRef.current.close();
       wsRef.current = null;
     }
+    clientIdRef.current = "";
     seenNonces.current.clear();
     closeDB();
     dispatch({ type: "RESET" });
@@ -581,7 +644,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const sendMessage = useCallback(
     (text: string) => {
       const s = stateRef.current;
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+      if (!s.connected) return;
       if (!text.trim() && !s.pendingFile) return;
       const msg: Record<string, unknown> = {
         type: "chat",
@@ -622,7 +685,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendDice = useCallback(() => {
     const s = stateRef.current;
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    if (!s.connected) return;
     const value = Math.floor(Math.random() * 6) + 1;
     const msg: Record<string, unknown> = {
       type: "chat",

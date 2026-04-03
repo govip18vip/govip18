@@ -12,6 +12,7 @@ import { AIPanel } from "@/components/panels/ai-panel";
 import { PMPanel } from "@/components/panels/pm-panel";
 import { SchedulePicker } from "@/components/panels/schedule-picker";
 import { VoiceEffectPicker } from "@/components/panels/voice-effect-picker";
+import { LightboxPanel } from "@/components/panels/lightbox-panel";
 
 export function ChatScreen() {
   const { state, dispatch } = useChatContext();
@@ -47,6 +48,9 @@ export function ChatScreen() {
       )}
       {panel === "voice-effect" && (
         <VoiceEffectPicker onClose={() => dispatch({ type: "SET_ACTIVE_PANEL", panel: null })} />
+      )}
+      {panel === "lightbox" && (
+        <LightboxPanel onClose={() => dispatch({ type: "SET_ACTIVE_PANEL", panel: null })} />
       )}
     </div>
   );

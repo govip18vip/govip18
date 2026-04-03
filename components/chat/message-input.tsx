@@ -18,10 +18,12 @@ import {
   Flame,
   Sparkles,
   Dice5,
+  Square,
 } from "lucide-react";
 import { useChatContext } from "@/context/chat-context";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { cn, formatSize } from "@/lib/utils";
-import { EMOJI_CATEGORIES } from "@/lib/constants";
+import { EMOJI_CATEGORIES, type VoiceEffectKey } from "@/lib/constants";
 
 export function MessageInput() {
   const { state, dispatch, sendMessage, sendDice, sendEncrypted, callAI, sysMsg } = useChatContext();
@@ -32,6 +34,14 @@ export function MessageInput() {
   const fileRef = useRef<HTMLInputElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const isTypingRef = useRef(false);
+
+  const { recording, duration, startRecording, stopRecording, cancelRecording } = useVoiceRecorder({
+    maxDuration: 60,
+    onComplete: (file) => {
+      dispatch({ type: "SET_PENDING_FILE", file });
+      sysMsg(`语音已录制 ${file.durationHint}秒`);
+    },
+  });
 
   const isAIMode = /^@ai\s/i.test(text);
   const canSend = text.trim().length > 0 || state.pendingFile !== null;
@@ -127,6 +137,14 @@ export function MessageInput() {
     }
   };
 
+  const handleVoiceStart = () => {
+    if (recording) {
+      stopRecording();
+    } else {
+      startRecording(state.currentEffect as VoiceEffectKey);
+    }
+  };
+
   const emojiKeys = Object.keys(EMOJI_CATEGORIES);
 
   return (
@@ -172,7 +190,11 @@ export function MessageInput() {
       {/* Pending file preview */}
       {state.pendingFile && (
         <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-          {state.pendingFile.type.startsWith("image/") ? (
+          {state.pendingFile.isVoice ? (
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Mic className="h-5 w-5 text-primary" />
+            </div>
+          ) : state.pendingFile.type.startsWith("image/") ? (
             <img
               src={state.pendingFile.data}
               alt="preview"
@@ -184,9 +206,16 @@ export function MessageInput() {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium">{state.pendingFile.name}</p>
+            <p className="truncate text-xs font-medium">
+              {state.pendingFile.isVoice 
+                ? `语音消息 ${state.pendingFile.durationHint || 0}秒` 
+                : state.pendingFile.name}
+            </p>
             <p className="text-[10px] text-muted-foreground">
               {formatSize(state.pendingFile.size)}
+              {state.pendingFile.effect && state.pendingFile.effect !== "none" && (
+                <span className="ml-1 text-purple">+ 变声</span>
+              )}
             </p>
           </div>
           <button
@@ -217,11 +246,52 @@ export function MessageInput() {
         </div>
       )}
 
+      {/* Recording bar */}
+      {recording && (
+        <div className="flex items-center justify-between bg-destructive/10 px-3 py-2">
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-3 w-3 rounded-full bg-destructive"
+              style={{ animation: "rec-pulse 1s infinite" }}
+            />
+            <span className="text-sm text-destructive font-medium">
+              录音中 {duration}s
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cancelRecording}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+              取消
+            </button>
+            <button
+              onClick={stopRecording}
+              className="flex items-center gap-1 rounded-lg bg-destructive px-3 py-1 text-xs text-white"
+            >
+              <Square className="h-3 w-3" />
+              完成
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Input bar */}
       <div className="flex items-center gap-1.5 px-2 py-2">
         <button
-          onClick={() => setIsVoiceMode(!isVoiceMode)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          onClick={() => {
+            if (isVoiceMode && !recording) {
+              handleVoiceStart();
+            }
+            setIsVoiceMode(!isVoiceMode);
+          }}
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors",
+            recording 
+              ? "bg-destructive/10 text-destructive"
+              : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+          )}
         >
           {isVoiceMode ? (
             <Keyboard className="h-5 w-5" />
@@ -239,8 +309,17 @@ export function MessageInput() {
           )}
         >
           {isVoiceMode ? (
-            <button className="flex h-10 w-full items-center justify-center text-sm text-muted-foreground">
-              按住 说话
+            <button 
+              onClick={handleVoiceStart}
+              disabled={recording}
+              className={cn(
+                "flex h-10 w-full items-center justify-center text-sm transition-colors",
+                recording 
+                  ? "text-destructive" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-xl"
+              )}
+            >
+              {recording ? `松开发送 (${duration}s)` : "按住 说话"}
             </button>
           ) : (
             <input
